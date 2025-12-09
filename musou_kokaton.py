@@ -141,14 +141,15 @@ class Beam(pg.sprite.Sprite):
     """
     ビームに関するクラス
     """
-    def __init__(self, bird: Bird):
+    def __init__(self, bird: Bird, angle: float = 0.0):
         """
         ビーム画像Surfaceを生成する
         引数 bird：ビームを放つこうかとん
         """
         super().__init__()
         self.vx, self.vy = bird.dire
-        angle = math.degrees(math.atan2(-self.vy, self.vx))
+        base_angle = math.degrees(math.atan2(-self.vy, self.vx))
+        angle = base_angle + angle
         self.image = pg.transform.rotozoom(pg.image.load(f"fig/beam.png"), angle, 1.0)
         self.vx = math.cos(math.radians(angle))
         self.vy = -math.sin(math.radians(angle))
@@ -241,6 +242,27 @@ class Score:
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         screen.blit(self.image, self.rect)
 
+class NeoBeam(pg.sprite.Sprite):
+    """
+    弾幕用クラス
+    """
+    
+    def __init__(self, bird: Bird,num: int = 5, span: float = 50.0):
+        super().__init__()
+        self.bird = bird
+        self.num = num
+        self.span = span
+
+        self.image = pg.Surface((1, 1), pg.SRCALPHA)
+        self.rect = self.image.get_rect(center=bird.rect.center)
+
+    def update(self) -> list[Beam]:
+        if self.num <= 1:
+            angles = [0.0]
+        else:
+            angles = [-self.span + i*(2*self.span)/(self.num-1) for i in range(self.num)]
+        return [Beam(self.bird, a) for a in angles]
+
 
 def main():
     pg.display.set_caption("真！こうかとん無双")
@@ -262,7 +284,10 @@ def main():
             if event.type == pg.QUIT:
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
-                beams.add(Beam(bird))
+                if key_lst[pg.K_LSHIFT]:
+                    beams.add(NeoBeam(bird, num=5).update())
+                else:
+                    beams.add(Beam(bird))
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
